@@ -51,8 +51,8 @@ import java.util.List;
 /**
  * Created by eneim on 6/4/16.
  */
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-public class VideoPlayerView extends TextureView implements Cineer.Player {
+@TargetApi(Build.VERSION_CODES.JELLY_BEAN) public class VideoPlayerView extends TextureView
+    implements Cineer.VideoPlayer {
 
   private static final String TAG = "MediaPlayerView";
 
@@ -123,6 +123,8 @@ public class VideoPlayerView extends TextureView implements Cineer.Player {
 
     @Override public void onVideoSizeChanged(int width, int height, int unAppliedRotationDegrees,
         float pixelWidthHeightRatio) {
+      mVideoHeight = height;
+      mVideoWidth = width;
       if (getSurfaceTexture() != null) {
         setVideoWidthHeightRatio(height == 0 ? 1 : (width * pixelWidthHeightRatio) / height);
       }
@@ -169,6 +171,8 @@ public class VideoPlayerView extends TextureView implements Cineer.Player {
    */
   private float mVideoWidthHeightAspectRatio;
   private long mPlayerPosition;
+  private int mVideoHeight;
+  private int mVideoWidth;
 
   private int mPlaybackState;
   private boolean mPlayerNeedsPrepare;
@@ -198,8 +202,7 @@ public class VideoPlayerView extends TextureView implements Cineer.Player {
     }
   };
 
-  @Override
-  public void setOnPlayerStateChangeListener(OnPlayerStateChangeListener listener) {
+  @Override public void setOnPlayerStateChangeListener(OnPlayerStateChangeListener listener) {
     this.mPlayerStateChangeListener = listener;
   }
 
@@ -473,6 +476,14 @@ public class VideoPlayerView extends TextureView implements Cineer.Player {
 
   @Override public void setBackgroundAudioEnabled(boolean enabled) {
     mBackgroundAudioEnabled = enabled;
+  }
+
+  @Override public int getVideoHeight() {
+    return mVideoHeight;
+  }
+
+  @Override public int getVideoWidth() {
+    return mVideoWidth;
   }
 
   private abstract class ExoMediaPlayerHelper

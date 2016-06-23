@@ -72,7 +72,7 @@ import java.util.Map;
  * <li>removes code that uses hidden APIs and thus is not available (e.g. subtitle support)</li>
  * </ol>
  */
-public class TextureVideoView extends TextureView implements Cineer.Player {
+public class TextureVideoView extends TextureView implements Cineer.VideoPlayer {
 
   public interface OnReleasedListener {
 
@@ -116,7 +116,8 @@ public class TextureVideoView extends TextureView implements Cineer.Player {
   private int mAudioSession;
   private int mVideoWidth;
   private int mVideoHeight;
-
+  // AdjustViewBounds behavior will be in compatibility mode for older apps.
+  private boolean mAdjustViewBoundsCompat = false;
   private boolean mBackgroundAudioEnabled = false;
 
   private Cineer.Controller mController;
@@ -152,61 +153,68 @@ public class TextureVideoView extends TextureView implements Cineer.Player {
   }
 
   @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-    //Log.i("@@@@", "onMeasure(" + MeasureSpec.toString(widthMeasureSpec) + ", "
-    //        + MeasureSpec.toString(heightMeasureSpec) + ")");
-
     int width = getDefaultSize(mVideoWidth, widthMeasureSpec);
     int height = getDefaultSize(mVideoHeight, heightMeasureSpec);
+
+    width = Math.max(width, getSuggestedMinimumWidth());
+    height = Math.max(height, getSuggestedMinimumHeight());
+
     if (mVideoWidth > 0 && mVideoHeight > 0) {
+      int w = mVideoWidth;
+      int h = mVideoHeight;
 
       int widthSpecMode = MeasureSpec.getMode(widthMeasureSpec);
-      int widthSpecSize = MeasureSpec.getSize(widthMeasureSpec);
       int heightSpecMode = MeasureSpec.getMode(heightMeasureSpec);
-      int heightSpecSize = MeasureSpec.getSize(heightMeasureSpec);
 
-      if (widthSpecMode == MeasureSpec.EXACTLY && heightSpecMode == MeasureSpec.EXACTLY) {
-        // the size is fixed
-        width = widthSpecSize;
-        height = heightSpecSize;
+      // Desired aspect ratio of the view's contents (not including padding)
+      float desiredAspect = (float) w / (float) h;
+      // We are allowed to change the view's width
+      boolean resizeWidth = widthSpecMode != MeasureSpec.EXACTLY;
+      // We are allowed to change the view's height
+      boolean resizeHeight = heightSpecMode != MeasureSpec.EXACTLY;
 
-        // for compatibility, we adjust size based on aspect ratio
-        if (mVideoWidth * height < width * mVideoHeight) {
-          //Log.i("@@@", "image too wide, correcting");
-          width = height * mVideoWidth / mVideoHeight;
-        } else if (mVideoWidth * height > width * mVideoHeight) {
-          //Log.i("@@@", "image too tall, correcting");
-          height = width * mVideoHeight / mVideoWidth;
-        }
-      } else if (widthSpecMode == MeasureSpec.EXACTLY) {
-        // only the width is fixed, adjust the height to match aspect ratio if possible
-        width = widthSpecSize;
-        height = width * mVideoHeight / mVideoWidth;
-        if (heightSpecMode == MeasureSpec.AT_MOST && height > heightSpecSize) {
-          // couldn't match aspect ratio within the constraints
-          height = heightSpecSize;
-        }
-      } else if (heightSpecMode == MeasureSpec.EXACTLY) {
-        // only the height is fixed, adjust the width to match aspect ratio if possible
-        height = heightSpecSize;
-        width = height * mVideoWidth / mVideoHeight;
-        if (widthSpecMode == MeasureSpec.AT_MOST && width > widthSpecSize) {
-          // couldn't match aspect ratio within the constraints
-          width = widthSpecSize;
+      if (resizeHeight || resizeWidth) {
+        // Get the max possible width given our constraints
+        width = resolveAdjustedSize(w, widthMeasureSpec);
+        // Get the max possible height given our constraints
+        height = resolveAdjustedSize(h, heightMeasureSpec);
+
+        if (desiredAspect != 0.0f) {
+          // See what our actual aspect ratio is
+          float actualAspect = (float) width / (float) height;
+          if (Math.abs(actualAspect - desiredAspect) > 0.0000001) {
+            boolean done = false;
+            // Try adjusting width to be proportional to height
+            if (resizeWidth) {
+              int newWidth = (int) (desiredAspect * height);
+              if (!resizeHeight && !mAdjustViewBoundsCompat) {
+                width = resolveAdjustedSize(newWidth, widthMeasureSpec);
+              }
+              if (newWidth <= width) {
+                width = newWidth;
+                done = true;
+              }
+            }
+
+            // Try adjusting height to be proportional to width
+            if (!done && resizeHeight) {
+              int newHeight = (int) (width / desiredAspect);
+              // Allow the height to outgrow its original estimate if width is fixed.
+              if (!resizeWidth && !mAdjustViewBoundsCompat) {
+                height = resolveAdjustedSize(newHeight, heightMeasureSpec);
+              }
+              if (newHeight <= height) {
+                height = newHeight;
+              }
+            }
+          }
         }
       } else {
-        // neither the width nor the height are fixed, try to use actual video size
-        width = mVideoWidth;
-        height = mVideoHeight;
-        if (heightSpecMode == MeasureSpec.AT_MOST && height > heightSpecSize) {
-          // too tall, decrease both width and height
-          height = heightSpecSize;
-          width = height * mVideoWidth / mVideoHeight;
-        }
-        if (widthSpecMode == MeasureSpec.AT_MOST && width > widthSpecSize) {
-          // too wide, decrease both width and height
-          width = widthSpecSize;
-          height = width * mVideoHeight / mVideoWidth;
-        }
+        w = Math.max(w, getSuggestedMinimumWidth());
+        h = Math.max(h, getSuggestedMinimumHeight());
+
+        width = resolveSizeAndState(w, widthMeasureSpec, 0);
+        height = resolveSizeAndState(h, heightMeasureSpec, 0);
       }
     } else {
       // no size yet, just adopt the given spec sizes
@@ -229,6 +237,8 @@ public class TextureVideoView extends TextureView implements Cineer.Player {
   }
 
   private void initVideoView() {
+    mAdjustViewBoundsCompat =
+        getContext().getApplicationInfo().targetSdkVersion <= Build.VERSION_CODES.JELLY_BEAN_MR1;
     mVideoWidth = 0;
     mVideoHeight = 0;
     setSurfaceTextureListener(mSurfaceTextureListener);
@@ -750,5 +760,13 @@ public class TextureVideoView extends TextureView implements Cineer.Player {
 
   @Override public void setMedia(@NonNull Media source) {
     setMedia(source.getMediaUri());
+  }
+
+  @Override public int getVideoHeight() {
+    return mVideoHeight;
+  }
+
+  @Override public int getVideoWidth() {
+    return mVideoWidth;
   }
 }
