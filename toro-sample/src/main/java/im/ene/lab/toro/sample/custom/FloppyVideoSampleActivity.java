@@ -39,9 +39,9 @@ public class FloppyVideoSampleActivity extends AppCompatActivity {
   private Button changeVideo;
 
   private final String[] VIDEOS = new String[] {
+      "https://storage.googleapis.com/wvmedia/clear/vp9/tears/tears.mpd",
       "https://r5---sn-a5m7ln76.c.docs.google.com/videoplayback?requiressl=yes&id=be8f2b6f12962493&itag=59&source=webdrive&ttl=transient&app=texmex&ip=124.33.192.254&ipbits=8&expire=1466674004&sparams=expire,id,ip,ipbits,itag,mm,mn,ms,mv,nh,pl,requiressl,source,ttl&signature=42B55503F256CEA47F6FBACD68F8D089D8B94C5F.01649C48E06DE87B1E14AF49A22A161A83F082E7&key=cms1&pl=17&cpn=ZPLidLA-BtyNX9om&c=WEB&cver=1.20160622&redirect_counter=1&req_id=c232ebf92a9636e2&cms_redirect=yes&mm=34&mn=sn-a5m7ln76&ms=ltu&mt=1466659601&mv=m&nh=IgpwcjAyLm5ydDE5KgkxMjcuMC4wLjE",
       // "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4"
-      "https://storage.googleapis.com/wvmedia/clear/vp9/tears/tears.mpd"
   };
 
   int currentVideoIndex = 0;

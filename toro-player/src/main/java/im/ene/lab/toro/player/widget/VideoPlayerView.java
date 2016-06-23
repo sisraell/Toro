@@ -27,6 +27,7 @@ import android.support.annotation.FloatRange;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
 import com.google.android.exoplayer.ExoPlayer;
@@ -123,6 +124,16 @@ import java.util.List;
 
     @Override public void onVideoSizeChanged(int width, int height, int unAppliedRotationDegrees,
         float pixelWidthHeightRatio) {
+      Log.d(TAG, "onVideoSizeChanged() called with: "
+          + "width = ["
+          + width
+          + "], height = ["
+          + height
+          + "], unAppliedRotationDegrees = ["
+          + unAppliedRotationDegrees
+          + "], pixelWidthHeightRatio = ["
+          + pixelWidthHeightRatio
+          + "]");
       mVideoHeight = height;
       mVideoWidth = width;
       if (getSurfaceTexture() != null) {
