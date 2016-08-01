@@ -43,6 +43,15 @@ final class ToroScrollListener extends RecyclerView.OnScrollListener {
     return playerManager;
   }
 
+  public void pauseCurrentPlayer() {
+    final ToroPlayer currentPlayer = playerManager.getPlayer();
+    if (currentPlayer != null) {
+      playerManager.saveVideoState(currentPlayer.getMediaId(), currentPlayer.getCurrentPosition(),
+              currentPlayer.getDuration());
+      playerManager.pausePlayback();
+    }
+  }
+
   @Override public void onScrollStateChanged(RecyclerView parent, int newState) {
     if (newState != RecyclerView.SCROLL_STATE_IDLE) {
       return;

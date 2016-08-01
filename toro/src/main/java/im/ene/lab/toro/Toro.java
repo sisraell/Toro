@@ -25,6 +25,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewParent;
 import im.ene.lab.toro.media.Cineer;
@@ -484,6 +485,36 @@ public final class Toro implements Application.ActivityLifecycleCallbacks {
 
   // Centralize Video state callbacks
 
+  private static ToroScrollListener getCurrentListenerForView(@NonNull RecyclerView recyclerView) {
+    for (Map.Entry<Integer, ToroScrollListener> entry : Toro.sInstance.mListeners.entrySet()) {
+      Integer key = entry.getKey();
+      RecyclerView view = Toro.sInstance.mViews.get(key);
+      if (view != null && view == recyclerView) { // Found the parent view in our cache
+        ToroScrollListener listener = entry.getValue();
+        return listener;
+      }
+    }
+    return null;
+  }
+
+  public static void pauseCurrentPlayerForView(@NonNull RecyclerView recyclerView) {
+    ToroScrollListener listener = getCurrentListenerForView(recyclerView);
+    if (listener != null) {
+      listener.pauseCurrentPlayer();
+    }
+
+  }
+
+
+  public static void resetPlayerForView(@NonNull RecyclerView recyclerView) {
+    ToroScrollListener listener = getCurrentListenerForView(recyclerView);
+    if (listener != null) {
+      VideoPlayerManager manager = listener.getManager();
+      manager.setPlayer(null);
+    }
+  }
+
+
   void onVideoPrepared(@NonNull ToroPlayer player, @NonNull View itemView,
       @Nullable ViewParent parent, @Nullable Cineer mediaPlayer) {
     VideoPlayerManager manager = null;
@@ -504,21 +535,28 @@ public final class Toro implements Application.ActivityLifecycleCallbacks {
       return;
     }
 
+    Log.i(TAG,"onVideoPrepared");
+
     // 1. Check if current manager wrapped this player
     if (player.equals(manager.getPlayer())) {
+      Log.i(TAG,"onVideoPrepared. Playing previous video");
       if (player.wantsToPlay() && Toro.getStrategy().allowsToPlay(player, parent)) {
         manager.restoreVideoState(player.getMediaId());
+
         manager.startPlayback();
       }
     } else {
       // There is no current player, but this guy is prepared, so let's him go ...
       if (manager.getPlayer() == null) {
+        Log.i(TAG,"onVideoPrepared. Previous video is null");
         // ... if it's possible
         if (player.wantsToPlay() && Toro.getStrategy().allowsToPlay(player, parent)) {
           manager.setPlayer(player);
           manager.restoreVideoState(player.getMediaId());
           manager.startPlayback();
         }
+      } else {
+        Log.i(TAG,"onVideoPrepared. Previous video is different");
       }
     }
   }
